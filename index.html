@@ -43,8 +43,10 @@
   .holiday-item { display: flex; align-items: center; justify-content: space-between; background: #F5F6EF; border-radius: 7px; padding: 8px 10px; }
   .holiday-toggle { display: flex; align-items: center; gap: 8px; background: none; border: none; padding: 0; text-align: left; }
   .holiday-name { font-weight: 500; font-size: 13px; }
+  .holiday-name.confirmed { color: #C1622D; }
+  .holiday-name.tentative { color: #E3A47E; }
   .holiday-dates { color: #7A8A6B; margin-left: 8px; font-size: 13px; }
-  .tentative-tag { color: #B0522B; margin-left: 8px; font-size: 11px; }
+  .tentative-tag { color: #B18A6E; margin-left: 8px; font-size: 11px; font-style: italic; }
   .del-btn { background: none; border: none; color: #B0522B; padding: 4px; display: flex; }
 
   .holiday-form { margin-top: 14px; border-top: 1px solid #E5E7DB; padding-top: 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -68,7 +70,8 @@
   .weekend-row { display: flex; gap: 12px; }
   .trail-col { display: flex; flex-direction: column; align-items: center; width: 22px; }
   .marker { width: 12px; height: 12px; border-radius: 50%; margin-top: 18px; flex-shrink: 0; background: #8FA37D; }
-  .marker.holiday { background: #C1622D; box-shadow: 0 0 0 3px rgba(193,98,45,0.18); }
+  .marker.holiday-confirmed { background: #C1622D; box-shadow: 0 0 0 3px rgba(193,98,45,0.18); }
+  .marker.holiday-tentative { background: #E3A47E; box-shadow: 0 0 0 3px rgba(227,164,126,0.18); }
   .trail-line { flex: 1; width: 2px; background: #D3D8C5; }
 
   .card { flex: 1; background: #fff; border: 1px solid #DCE0D0; border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
@@ -77,10 +80,14 @@
     display: flex; align-items: center; justify-content: space-between; text-align: left;
   }
   .range-label { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; }
-  .range-label.holiday { color: #C1622D; }
-  .holiday-name-line { font-size: 12px; color: #C1622D; margin-top: 3px; }
+  .range-label.holiday-confirmed { color: #C1622D; }
+  .range-label.holiday-tentative { color: #E3A47E; }
+  .holiday-name-line { font-size: 12px; margin-top: 3px; }
+  .holiday-name-line.holiday-confirmed { color: #C1622D; }
+  .holiday-name-line.holiday-tentative { color: #E3A47E; }
   .summary-line { font-size: 12px; color: #7A8A6B; margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
-  .summary-line .tentative { color: #B0522B; }
+  .summary-line .camp-confirmed { color: #3E6B8A; font-weight: 500; }
+  .summary-line .camp-tentative { color: #8FB0C4; font-weight: 500; }
 
   .card-body { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; }
   .field-label { font-size: 12px; color: #5B6E4E; font-weight: 500; display: flex; flex-direction: column; gap: 4px; }
@@ -94,8 +101,8 @@
   .checkbox-label input { width: 16px; height: 16px; }
 
   .camping-block { margin-left: 24px; display: flex; flex-direction: column; gap: 8px; }
-  .confirm-btn { display: flex; align-items: center; gap: 6px; background: none; border: none; padding: 0; font-size: 12px; font-weight: 500; color: #B0522B; }
-  .confirm-btn.confirmed { color: #5B6E4E; }
+  .confirm-btn { display: flex; align-items: center; gap: 6px; background: none; border: none; padding: 0; font-size: 12px; font-weight: 500; color: #8FB0C4; }
+  .confirm-btn.confirmed { color: #3E6B8A; }
 
   .more-btn-wrap { display: flex; justify-content: center; margin-top: 4px; margin-left: 34px; }
   .more-btn { background: #F5F6EF; border: 1px solid #DCE0D0; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 500; color: #22301C; }
@@ -183,9 +190,12 @@ function buildWeekends(startDate, count, holidays) {
         if (hEnd > extEnd) extEnd = hEnd;
       }
     }
+    // if any matched holiday is confirmed, treat the weekend as confirmed; otherwise tentative
+    const holidayStatus = matched.length === 0 ? null : (matched.some(h => h.confirmed) ? "confirmed" : "tentative");
     weekends.push({
       key: toISO(sat), sat, sun, extStart, extEnd,
       isHoliday: matched.length > 0,
+      holidayStatus,
       holidayNames: matched.map(h => h.name),
     });
     sat = addDays(sat, 7);
@@ -244,7 +254,7 @@ function renderHolidays() {
             ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6E4E" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`
             : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B7BFA8" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>`}
           <span>
-            <span class="holiday-name">${escapeHtml(h.name)}</span>
+            <span class="holiday-name ${h.confirmed ? "confirmed" : "tentative"}">${escapeHtml(h.name)}</span>
             <span class="holiday-dates mono">${fmtShort(fromISO(h.start))}${h.end && h.end !== h.start ? " – " + fmtShort(fromISO(h.end)) : ""}</span>
             ${!h.confirmed ? `<span class="tentative-tag">tentative</span>` : ""}
           </span>
@@ -372,10 +382,13 @@ function renderWeekendCard(w) {
     ? `${fmtWeekday(w.extStart)} ${fmtShort(w.extStart)} – ${fmtWeekday(w.extEnd)} ${fmtShort(w.extEnd)}`
     : `${fmtShort(w.sat)} – ${fmtShort(w.sun)}`;
 
+  const holidayClass = w.isHoliday ? (w.holidayStatus === "confirmed" ? "holiday-confirmed" : "holiday-tentative") : "";
+  const campClass = info.campingEnabled ? (info.campingConfirmed ? "camp-confirmed" : "camp-tentative") : "";
+
   const summaryParts = [];
   if (info.parkrun) summaryParts.push(`<span>🏃 ${escapeHtml(info.parkrun)}</span>`);
   if (info.campingEnabled) {
-    summaryParts.push(`<span>⛺ ${escapeHtml(info.campingLocation || "Camping")}${!info.campingConfirmed ? `<span class="tentative"> · tentative</span>` : ""}</span>`);
+    summaryParts.push(`<span class="${campClass}">⛺ ${escapeHtml(info.campingLocation || "Camping")}${!info.campingConfirmed ? " (tentative)" : ""}</span>`);
   }
   if (info.activities && !isOpen) {
     const trimmed = info.activities.length > 40 ? info.activities.slice(0,40) + "…" : info.activities;
@@ -385,14 +398,14 @@ function renderWeekendCard(w) {
   return `
     <div class="weekend-row">
       <div class="trail-col">
-        <div class="marker ${w.isHoliday ? "holiday" : ""}"></div>
+        <div class="marker ${holidayClass}"></div>
         <div class="trail-line"></div>
       </div>
       <div class="card">
         <button class="card-head" data-toggle-open="${w.key}">
           <div>
-            <div class="range-label mono ${w.isHoliday ? "holiday" : ""}">${rangeLabel}</div>
-            ${w.isHoliday ? `<div class="holiday-name-line">${escapeHtml(w.holidayNames.join(", "))}</div>` : ""}
+            <div class="range-label mono ${holidayClass}">${rangeLabel}</div>
+            ${w.isHoliday ? `<div class="holiday-name-line ${holidayClass}">${escapeHtml(w.holidayNames.join(", "))}${w.holidayStatus === "tentative" ? " (tentative)" : ""}</div>` : ""}
             <div class="summary-line">${summaryParts.join("")}</div>
           </div>
           <span class="chev">
