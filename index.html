@@ -127,6 +127,7 @@
       <span id="saveStatus"></span>
     </div>
     <p>Every weekend mapped out — parkrun, camp spots, and what's on.</p>
+    <p id="storageWarning" style="display:none; color:#B0522B; font-size:12px; margin-top:6px;"></p>
   </header>
 
   <div class="wrap">
@@ -204,6 +205,22 @@ function buildWeekends(startDate, count, holidays) {
 }
 
 // ---------- storage ----------
+// Always uses the browser's own localStorage — works once this file is
+// opened in a normal browser tab (or hosted/installed as a PWA). Note:
+// some sandboxed preview panes block localStorage entirely, in which case
+// saving won't work until you open the actual file in a browser.
+const storageAdapter = {
+  async get(key) {
+    const v = localStorage.getItem(key);
+    return v === null ? null : { key, value: v };
+  },
+  async set(key, value) {
+    localStorage.setItem(key, value);
+    return { key, value };
+  },
+};
+
+// ---------- storage ----------
 // IMPORTANT: keep this key stable across app versions — changing it would
 // orphan any data already saved by the user.
 const STORAGE_KEY = "trailhead-planner-data";
@@ -234,7 +251,7 @@ function migrate(data) {
 async function loadData() {
   let data = { holidays: [], weekendInfo: {} };
   try {
-    const res = await window.storage.get(STORAGE_KEY);
+    const res = await storageAdapter.get(STORAGE_KEY);
     if (res && res.value) {
       const parsed = JSON.parse(res.value);
       data = { holidays: parsed.holidays || [], weekendInfo: parsed.weekendInfo || {}, version: parsed.version };
@@ -245,7 +262,7 @@ async function loadData() {
   data = migrate(data);
   // persist immediately if this was an upgrade, so the migrated shape is saved
   try {
-    await window.storage.set(STORAGE_KEY, JSON.stringify(data));
+    await storageAdapter.set(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
     console.error("Failed to save migrated data:", e);
   }
@@ -258,7 +275,7 @@ function persist() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
-      await window.storage.set(STORAGE_KEY, JSON.stringify({ version: SCHEMA_VERSION, holidays: state.holidays, weekendInfo: state.weekendInfo }));
+      await storageAdapter.set(STORAGE_KEY, JSON.stringify({ version: SCHEMA_VERSION, holidays: state.holidays, weekendInfo: state.weekendInfo }));
       statusEl.textContent = "saved";
       setTimeout(() => { statusEl.textContent = ""; }, 1200);
     } catch (e) {
@@ -517,6 +534,11 @@ loadData().then(d => {
   state.weekendInfo = d.weekendInfo || {};
   document.getElementById("loading").style.display = "none";
   document.getElementById("app").style.display = "block";
+  if (storageMode === "memory") {
+    const warn = document.getElementById("storageWarning");
+    warn.textContent = "Changes will only be kept for this session — open the downloaded file in a browser tab (or host it) to save permanently.";
+    warn.style.display = "block";
+  }
   renderAll();
 });
 </script>
