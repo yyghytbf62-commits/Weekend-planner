@@ -204,13 +204,52 @@ function buildWeekends(startDate, count, holidays) {
 }
 
 // ---------- storage ----------
+// IMPORTANT: keep this key stable across app versions — changing it would
+// orphan any data already saved by the user.
 const STORAGE_KEY = "trailhead-planner-data";
+const SCHEMA_VERSION = 1;
+
+// Bring older saved data up to the current shape. Each step only ever adds
+// missing fields with safe defaults — it never removes or overwrites data
+// the person has already entered.
+function migrate(data) {
+  const fromVersion = data.version || 0;
+
+  if (fromVersion < 1) {
+    // v0 -> v1: introduced `confirmed` on holidays and `campingConfirmed` on weekends
+    data.holidays = (data.holidays || []).map(h => ({ confirmed: false, ...h }));
+    data.weekendInfo = data.weekendInfo || {};
+    for (const key of Object.keys(data.weekendInfo)) {
+      data.weekendInfo[key] = { campingConfirmed: false, ...data.weekendInfo[key] };
+    }
+  }
+
+  // Future migrations go here, e.g.:
+  // if (fromVersion < 2) { ... }
+
+  data.version = SCHEMA_VERSION;
+  return data;
+}
+
 async function loadData() {
+  let data = { holidays: [], weekendInfo: {} };
   try {
     const res = await window.storage.get(STORAGE_KEY);
-    if (res && res.value) return JSON.parse(res.value);
-  } catch (e) { /* key doesn't exist yet */ }
-  return { holidays: [], weekendInfo: {} };
+    if (res && res.value) {
+      const parsed = JSON.parse(res.value);
+      data = { holidays: parsed.holidays || [], weekendInfo: parsed.weekendInfo || {}, version: parsed.version };
+    }
+  } catch (e) {
+    // key doesn't exist yet — first run, nothing to migrate
+  }
+  data = migrate(data);
+  // persist immediately if this was an upgrade, so the migrated shape is saved
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error("Failed to save migrated data:", e);
+  }
+  return data;
 }
 let saveTimer = null;
 function persist() {
@@ -219,7 +258,7 @@ function persist() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
-      await window.storage.set(STORAGE_KEY, JSON.stringify({ holidays: state.holidays, weekendInfo: state.weekendInfo }));
+      await window.storage.set(STORAGE_KEY, JSON.stringify({ version: SCHEMA_VERSION, holidays: state.holidays, weekendInfo: state.weekendInfo }));
       statusEl.textContent = "saved";
       setTimeout(() => { statusEl.textContent = ""; }, 1200);
     } catch (e) {
