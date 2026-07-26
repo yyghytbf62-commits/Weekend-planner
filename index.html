@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trailhead — Weekend Planner</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #EDEFE6;
+    color: #22301C;
+    font-family: 'Inter', system-ui, sans-serif;
+    padding-bottom: 48px;
+  }
+  input, textarea, button { font-family: 'Inter', sans-serif; }
+  input:focus, textarea:focus { outline: 2px solid #C1622D; outline-offset: 1px; }
+  button:focus-visible { outline: 2px solid #C1622D; outline-offset: 2px; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .display { font-family: 'Spectral', serif; }
+  ::placeholder { color: #93A184; }
+  button { cursor: pointer; }
+
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 20px; }
+
+  header { padding: 32px 20px 20px; max-width: 640px; margin: 0 auto; }
+  header .row { display: flex; align-items: baseline; justify-content: space-between; }
+  h1 { font-size: 30px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  header p { margin: 4px 0 0; font-size: 14px; color: #5B6E4E; }
+  #saveStatus { font-size: 11px; color: #7A8A6B; height: 16px; }
+
+  .panel { background: #fff; border: 1px solid #DCE0D0; border-radius: 10px; padding: 16px; margin-bottom: 8px; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; }
+  .panel-head .title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+  .add-btn {
+    display: flex; align-items: center; gap: 4px; background: #22301C; color: #EDEFE6;
+    border: none; border-radius: 7px; padding: 6px 10px; font-size: 13px; font-weight: 500;
+  }
+  .empty-hint { font-size: 13px; color: #7A8A6B; margin: 10px 0 0; }
+
+  .holiday-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .holiday-item { display: flex; align-items: center; justify-content: space-between; background: #F5F6EF; border-radius: 7px; padding: 8px 10px; }
+  .holiday-toggle { display: flex; align-items: center; gap: 8px; background: none; border: none; padding: 0; text-align: left; }
+  .holiday-name { font-weight: 500; font-size: 13px; }
+  .holiday-dates { color: #7A8A6B; margin-left: 8px; font-size: 13px; }
+  .tentative-tag { color: #B0522B; margin-left: 8px; font-size: 11px; }
+  .del-btn { background: none; border: none; color: #B0522B; padding: 4px; display: flex; }
+
+  .holiday-form { margin-top: 14px; border-top: 1px solid #E5E7DB; padding-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .holiday-form input[type="text"], .holiday-form input[type="date"] {
+    padding: 8px 10px; border-radius: 7px; border: 1px solid #DCE0D0; font-size: 13px; width: 100%;
+  }
+  .date-row { display: flex; gap: 8px; }
+  .date-row label { flex: 1; font-size: 11px; color: #7A8A6B; }
+  .date-row label span { display: block; margin-bottom: 2px; }
+  .save-holiday-btn {
+    align-self: flex-start; background: #C1622D; color: #fff; border: none;
+    border-radius: 7px; padding: 8px 14px; font-size: 13px; font-weight: 500;
+  }
+  .save-holiday-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .month-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7A8A6B;
+    letter-spacing: 0.06em; text-transform: uppercase; margin: 18px 0 10px 34px;
+  }
+
+  .weekend-row { display: flex; gap: 12px; }
+  .trail-col { display: flex; flex-direction: column; align-items: center; width: 22px; }
+  .marker { width: 12px; height: 12px; border-radius: 50%; margin-top: 18px; flex-shrink: 0; background: #8FA37D; }
+  .marker.holiday { background: #C1622D; box-shadow: 0 0 0 3px rgba(193,98,45,0.18); }
+  .trail-line { flex: 1; width: 2px; background: #D3D8C5; }
+
+  .card { flex: 1; background: #fff; border: 1px solid #DCE0D0; border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+  .card-head {
+    width: 100%; background: none; border: none; padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between; text-align: left;
+  }
+  .range-label { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; }
+  .range-label.holiday { color: #C1622D; }
+  .holiday-name-line { font-size: 12px; color: #C1622D; margin-top: 3px; }
+  .summary-line { font-size: 12px; color: #7A8A6B; margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .summary-line .tentative { color: #B0522B; }
+
+  .card-body { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .field-label { font-size: 12px; color: #5B6E4E; font-weight: 500; display: flex; flex-direction: column; gap: 4px; }
+  .field-label > span { display: flex; align-items: center; gap: 5px; }
+  .field-label input[type="text"], .field-label textarea {
+    padding: 8px 10px; border-radius: 7px; border: 1px solid #DCE0D0; font-size: 13px; font-family: 'Inter', sans-serif;
+  }
+  textarea { resize: vertical; }
+
+  .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: #5B6E4E; }
+  .checkbox-label input { width: 16px; height: 16px; }
+
+  .camping-block { margin-left: 24px; display: flex; flex-direction: column; gap: 8px; }
+  .confirm-btn { display: flex; align-items: center; gap: 6px; background: none; border: none; padding: 0; font-size: 12px; font-weight: 500; color: #B0522B; }
+  .confirm-btn.confirmed { color: #5B6E4E; }
+
+  .more-btn-wrap { display: flex; justify-content: center; margin-top: 4px; margin-left: 34px; }
+  .more-btn { background: #F5F6EF; border: 1px solid #DCE0D0; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 500; color: #22301C; }
+
+  .loading { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .spinner {
+    width: 28px; height: 28px; border: 3px solid #DCE0D0; border-top-color: #5B6E4E;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .chev { color: #7A8A6B; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div id="loading" class="loading"><div class="spinner"></div></div>
+<div id="app" style="display:none;">
+  <header>
+    <div class="row">
+      <h1 class="display">Trailhead</h1>
+      <span id="saveStatus"></span>
+    </div>
+    <p>Every weekend mapped out — parkrun, camp spots, and what's on.</p>
+  </header>
+
+  <div class="wrap">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="title">🚩 Holidays &amp; leave</div>
+        <button class="add-btn" id="toggleHolidayForm">+ Add</button>
+      </div>
+      <div id="holidayListWrap"></div>
+      <div id="holidayFormWrap" style="display:none;"></div>
+    </div>
+
+    <div id="weekendSection"></div>
+
+    <div class="more-btn-wrap">
+      <button class="more-btn" id="moreWeeksBtn">Show 12 more weeks</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- date helpers ----------
+const DAY = 86400000;
+function toISO(d) {
+  const dt = new Date(d);
+  dt.setHours(0,0,0,0);
+  return dt.toISOString().slice(0,10);
+}
+function fromISO(s) {
+  const [y,m,d] = s.split("-").map(Number);
+  return new Date(y, m-1, d);
+}
+function addDays(d, n) { return new Date(d.getTime() + n*DAY); }
+function fmtShort(d) { return d.toLocaleDateString("en-AU", { day:"numeric", month:"short" }); }
+function fmtWeekday(d) { return d.toLocaleDateString("en-AU", { weekday:"short" }); }
+function fmtMonthYear(d) { return d.toLocaleDateString("en-AU", { month:"long", year:"numeric" }); }
+function nextSaturdayOnOrAfter(date) {
+  const d = new Date(date); d.setHours(0,0,0,0);
+  const diff = (6 - d.getDay() + 7) % 7;
+  return addDays(d, diff);
+}
+function escapeHtml(str) {
+  return (str || "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function buildWeekends(startDate, count, holidays) {
+  const weekends = [];
+  let sat = nextSaturdayOnOrAfter(startDate);
+  for (let i = 0; i < count; i++) {
+    const sun = addDays(sat, 1);
+    const winStart = addDays(sat, -2);
+    const winEnd = addDays(sun, 2);
+    let extStart = sat, extEnd = sun;
+    let matched = [];
+    for (const h of holidays) {
+      const hStart = fromISO(h.start);
+      const hEnd = fromISO(h.end || h.start);
+      if (hStart <= winEnd && hEnd >= winStart) {
+        matched.push(h);
+        if (hStart < extStart) extStart = hStart;
+        if (hEnd > extEnd) extEnd = hEnd;
+      }
+    }
+    weekends.push({
+      key: toISO(sat), sat, sun, extStart, extEnd,
+      isHoliday: matched.length > 0,
+      holidayNames: matched.map(h => h.name),
+    });
+    sat = addDays(sat, 7);
+  }
+  return weekends;
+}
+
+// ---------- storage ----------
+const STORAGE_KEY = "trailhead-planner-data";
+async function loadData() {
+  try {
+    const res = await window.storage.get(STORAGE_KEY);
+    if (res && res.value) return JSON.parse(res.value);
+  } catch (e) { /* key doesn't exist yet */ }
+  return { holidays: [], weekendInfo: {} };
+}
+let saveTimer = null;
+function persist() {
+  const statusEl = document.getElementById("saveStatus");
+  statusEl.textContent = "saving…";
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      await window.storage.set(STORAGE_KEY, JSON.stringify({ holidays: state.holidays, weekendInfo: state.weekendInfo }));
+      statusEl.textContent = "saved";
+      setTimeout(() => { statusEl.textContent = ""; }, 1200);
+    } catch (e) {
+      console.error("Failed to save:", e);
+      statusEl.textContent = "save failed";
+    }
+  }, 400);
+}
+
+// ---------- state ----------
+const state = { holidays: [], weekendInfo: {}, weeksAhead: 12, openWeekend: null, showHolidayForm: false };
+
+function uid() {
+  return (crypto.randomUUID ? crypto.randomUUID() : "id-" + Date.now() + "-" + Math.random().toString(36).slice(2));
+}
+
+// ---------- rendering ----------
+function renderHolidays() {
+  const todayISO = toISO(new Date());
+  const upcoming = state.holidays.filter(h => (h.end || h.start) >= todayISO);
+  const wrap = document.getElementById("holidayListWrap");
+
+  if (upcoming.length === 0 && !state.showHolidayForm) {
+    wrap.innerHTML = `<p class="empty-hint">Add a leave date and any weekend it touches will be highlighted below.</p>`;
+  } else if (upcoming.length === 0) {
+    wrap.innerHTML = "";
+  } else {
+    wrap.innerHTML = `<ul class="holiday-list">` + upcoming.map(h => `
+      <li class="holiday-item">
+        <button class="holiday-toggle" data-toggle-confirm="${h.id}" aria-label="${h.confirmed ? 'Mark as tentative' : 'Mark as confirmed'}">
+          ${h.confirmed
+            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6E4E" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`
+            : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B7BFA8" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>`}
+          <span>
+            <span class="holiday-name">${escapeHtml(h.name)}</span>
+            <span class="holiday-dates mono">${fmtShort(fromISO(h.start))}${h.end && h.end !== h.start ? " – " + fmtShort(fromISO(h.end)) : ""}</span>
+            ${!h.confirmed ? `<span class="tentative-tag">tentative</span>` : ""}
+          </span>
+        </button>
+        <button class="del-btn" data-remove-holiday="${h.id}" aria-label="Remove ${escapeHtml(h.name)}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </li>
+    `).join("") + `</ul>`;
+  }
+
+  const formWrap = document.getElementById("holidayFormWrap");
+  formWrap.style.display = state.showHolidayForm ? "block" : "none";
+  if (state.showHolidayForm) {
+    formWrap.innerHTML = `
+      <div class="holiday-form">
+        <input type="text" id="hName" placeholder="Name (e.g. Annual leave, Christmas break)" value="${escapeHtml(state._hName || "")}" />
+        <div class="date-row">
+          <label><span>Start</span><input type="date" id="hStart" value="${state._hStart || ""}" /></label>
+          <label><span>End (optional)</span><input type="date" id="hEnd" value="${state._hEnd || ""}" /></label>
+        </div>
+        <button class="save-holiday-btn" id="saveHolidayBtn">Save holiday</button>
+      </div>
+    `;
+    document.getElementById("hName").oninput = e => { state._hName = e.target.value; updateSaveHolidayBtn(); };
+    document.getElementById("hStart").oninput = e => { state._hStart = e.target.value; updateSaveHolidayBtn(); };
+    document.getElementById("hEnd").oninput = e => { state._hEnd = e.target.value; };
+    document.getElementById("saveHolidayBtn").onclick = addHoliday;
+    updateSaveHolidayBtn();
+  }
+}
+
+function updateSaveHolidayBtn() {
+  const btn = document.getElementById("saveHolidayBtn");
+  if (!btn) return;
+  const ok = state._hName && state._hName.trim() && state._hStart;
+  btn.disabled = !ok;
+}
+
+function addHoliday() {
+  const name = (state._hName || "").trim();
+  const start = state._hStart;
+  const end = state._hEnd;
+  if (!name || !start) return;
+  state.holidays.push({ id: uid(), name, start, end: end || start, confirmed: false });
+  state.holidays.sort((a,b) => a.start.localeCompare(b.start));
+  state._hName = ""; state._hStart = ""; state._hEnd = "";
+  state.showHolidayForm = false;
+  persist();
+  renderAll();
+}
+
+function removeHoliday(id) {
+  state.holidays = state.holidays.filter(h => h.id !== id);
+  persist();
+  renderAll();
+}
+
+function toggleHolidayConfirmed(id) {
+  const h = state.holidays.find(h => h.id === id);
+  if (h) h.confirmed = !h.confirmed;
+  persist();
+  renderAll();
+}
+
+function updateWeekend(key, patch) {
+  state.weekendInfo[key] = { ...(state.weekendInfo[key] || {}), ...patch };
+  persist();
+}
+
+function renderWeekends() {
+  const weekends = buildWeekends(new Date(), state.weeksAhead, state.holidays);
+  const groups = [];
+  let lastMonth = "";
+  for (const w of weekends) {
+    const label = fmtMonthYear(w.sat);
+    if (label !== lastMonth) { groups.push({ label, items: [] }); lastMonth = label; }
+    groups[groups.length - 1].items.push(w);
+  }
+
+  const section = document.getElementById("weekendSection");
+  section.innerHTML = groups.map(group => `
+    <div class="month-label">${group.label}</div>
+    ${group.items.map(w => renderWeekendCard(w)).join("")}
+  `).join("");
+
+  // wire up events
+  section.querySelectorAll("[data-toggle-open]").forEach(el => {
+    el.onclick = () => {
+      const key = el.getAttribute("data-toggle-open");
+      state.openWeekend = state.openWeekend === key ? null : key;
+      renderWeekends();
+    };
+  });
+  section.querySelectorAll("[data-parkrun]").forEach(el => {
+    el.oninput = () => updateWeekend(el.getAttribute("data-parkrun"), { parkrun: el.value });
+  });
+  section.querySelectorAll("[data-camping-toggle]").forEach(el => {
+    el.onchange = () => {
+      const key = el.getAttribute("data-camping-toggle");
+      updateWeekend(key, { campingEnabled: el.checked });
+      renderWeekends();
+    };
+  });
+  section.querySelectorAll("[data-camping-location]").forEach(el => {
+    el.oninput = () => updateWeekend(el.getAttribute("data-camping-location"), { campingLocation: el.value });
+  });
+  section.querySelectorAll("[data-camping-confirm]").forEach(el => {
+    el.onclick = () => {
+      const key = el.getAttribute("data-camping-confirm");
+      const info = state.weekendInfo[key] || {};
+      updateWeekend(key, { campingConfirmed: !info.campingConfirmed });
+      renderWeekends();
+    };
+  });
+  section.querySelectorAll("[data-activities]").forEach(el => {
+    el.oninput = () => updateWeekend(el.getAttribute("data-activities"), { activities: el.value });
+  });
+}
+
+function renderWeekendCard(w) {
+  const info = state.weekendInfo[w.key] || {};
+  const isOpen = state.openWeekend === w.key;
+  const rangeLabel = w.isHoliday
+    ? `${fmtWeekday(w.extStart)} ${fmtShort(w.extStart)} – ${fmtWeekday(w.extEnd)} ${fmtShort(w.extEnd)}`
+    : `${fmtShort(w.sat)} – ${fmtShort(w.sun)}`;
+
+  const summaryParts = [];
+  if (info.parkrun) summaryParts.push(`<span>🏃 ${escapeHtml(info.parkrun)}</span>`);
+  if (info.campingEnabled) {
+    summaryParts.push(`<span>⛺ ${escapeHtml(info.campingLocation || "Camping")}${!info.campingConfirmed ? `<span class="tentative"> · tentative</span>` : ""}</span>`);
+  }
+  if (info.activities && !isOpen) {
+    const trimmed = info.activities.length > 40 ? info.activities.slice(0,40) + "…" : info.activities;
+    summaryParts.push(`<span>· ${escapeHtml(trimmed)}</span>`);
+  }
+
+  return `
+    <div class="weekend-row">
+      <div class="trail-col">
+        <div class="marker ${w.isHoliday ? "holiday" : ""}"></div>
+        <div class="trail-line"></div>
+      </div>
+      <div class="card">
+        <button class="card-head" data-toggle-open="${w.key}">
+          <div>
+            <div class="range-label mono ${w.isHoliday ? "holiday" : ""}">${rangeLabel}</div>
+            ${w.isHoliday ? `<div class="holiday-name-line">${escapeHtml(w.holidayNames.join(", "))}</div>` : ""}
+            <div class="summary-line">${summaryParts.join("")}</div>
+          </div>
+          <span class="chev">
+            ${isOpen
+              ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>`
+              : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`}
+          </span>
+        </button>
+        ${isOpen ? `
+        <div class="card-body">
+          <label class="field-label">
+            <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M4 12a8 8 0 0 1 8-8M4 12a8 8 0 0 0 8 8"/></svg> parkrun</span>
+            <input type="text" placeholder="e.g. Kedron Brook parkrun" value="${escapeHtml(info.parkrun || "")}" data-parkrun="${w.key}" />
+          </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" ${info.campingEnabled ? "checked" : ""} data-camping-toggle="${w.key}" />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.5 21 12 6l8.5 15M3.5 21h17M12 6 8 21M12 6l4 15"/></svg>
+            Camping this weekend
+          </label>
+
+          ${info.campingEnabled ? `
+          <div class="camping-block">
+            <label class="field-label">
+              <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Where</span>
+              <input type="text" placeholder="e.g. Noosa North Shore" value="${escapeHtml(info.campingLocation || "")}" data-camping-location="${w.key}" />
+            </label>
+            <button class="confirm-btn ${info.campingConfirmed ? "confirmed" : ""}" data-camping-confirm="${w.key}">
+              ${info.campingConfirmed
+                ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5B6E4E" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Confirmed`
+                : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B7BFA8" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg> Mark as confirmed`}
+            </button>
+          </div>` : ""}
+
+          <label class="field-label">
+            Other activities
+            <textarea rows="2" placeholder="Anything else on — deck build, birthday, day trip…" data-activities="${w.key}">${escapeHtml(info.activities || "")}</textarea>
+          </label>
+        </div>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function renderAll() {
+  renderHolidays();
+  renderWeekends();
+}
+
+// ---------- init ----------
+document.getElementById("toggleHolidayForm").onclick = () => {
+  state.showHolidayForm = !state.showHolidayForm;
+  renderAll();
+};
+document.getElementById("moreWeeksBtn").onclick = () => {
+  state.weeksAhead += 12;
+  renderWeekends();
+};
+
+// event delegation for holiday list buttons (re-rendered each time)
+document.getElementById("holidayListWrap").addEventListener("click", (e) => {
+  const confirmBtn = e.target.closest("[data-toggle-confirm]");
+  if (confirmBtn) { toggleHolidayConfirmed(confirmBtn.getAttribute("data-toggle-confirm")); return; }
+  const removeBtn = e.target.closest("[data-remove-holiday]");
+  if (removeBtn) { removeHoliday(removeBtn.getAttribute("data-remove-holiday")); return; }
+});
+
+loadData().then(d => {
+  state.holidays = d.holidays || [];
+  state.weekendInfo = d.weekendInfo || {};
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  renderAll();
+});
+</script>
+</body>
+</html>
