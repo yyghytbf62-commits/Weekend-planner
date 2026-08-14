@@ -92,8 +92,6 @@
   .summary-line { font-size: 12px; color: #7A8A6B; margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
   .summary-line .camp-confirmed { color: #3E6B8A; font-weight: 500; }
   .summary-line .camp-tentative { color: #8FB0C4; font-weight: 500; }
-  .summary-line .kids-badge { color: #B3841F; font-weight: 500; }
-  .summary-line .nokids-badge { color: #6B5A96; font-weight: 500; }
 
   .card-body { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; }
   .field-label { font-size: 12px; color: #5B6E4E; font-weight: 500; display: flex; flex-direction: column; gap: 4px; }
@@ -514,8 +512,6 @@ function renderWeekendCard(w) {
   const kidsCardClass = effectiveKidsFlag === "kids" ? "kids-flag" : effectiveKidsFlag === "nokids" ? "nokids-flag" : "";
 
   const summaryParts = [];
-  if (effectiveKidsFlag === "kids") summaryParts.push(`<span class="kids-badge">👨‍👩‍👧 Kids</span>`);
-  if (effectiveKidsFlag === "nokids") summaryParts.push(`<span class="nokids-badge">🙅 No kids</span>`);
   if (info.parkrun) summaryParts.push(`<span>🏃 ${escapeHtml(info.parkrun)}</span>`);
   if (info.campingEnabled) {
     summaryParts.push(`<span class="${campClass}">⛺ ${escapeHtml(info.campingLocation || "Camping")}${!info.campingConfirmed ? " (tentative)" : ""}</span>`);
