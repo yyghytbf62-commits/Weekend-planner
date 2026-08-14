@@ -422,6 +422,24 @@ function updateWeekend(key, patch) {
   persist();
 }
 
+// ---------- kids / no-kids default alternation ----------
+// The weekend containing 14 Aug 2026 is a "kids" weekend by default, and it
+// alternates every week from there. This is only a *default* — the moment
+// someone taps a kids/no-kids button for a given weekend, that weekend's
+// value is stored explicitly (as "kids", "nokids", or "none") and the
+// alternating default is never consulted for it again.
+const KIDS_REFERENCE_SAT = nextSaturdayOnOrAfter(new Date(2026, 7, 14)); // Sat of the 14 Aug 2026 weekend
+function computeDefaultKidsFlag(satDate) {
+  const diffWeeks = Math.round((satDate - KIDS_REFERENCE_SAT) / (7 * DAY));
+  const mod = ((diffWeeks % 2) + 2) % 2;
+  return mod === 0 ? "kids" : "nokids";
+}
+function getEffectiveKidsFlag(key, satDate) {
+  const stored = (state.weekendInfo[key] || {}).kidsFlag;
+  if (stored === "kids" || stored === "nokids" || stored === "none") return stored;
+  return computeDefaultKidsFlag(satDate); // never explicitly touched — use the default
+}
+
 function renderWeekends() {
   const weekends = buildWeekends(new Date(), state.weeksAhead, state.holidays);
   const groups = [];
@@ -474,9 +492,10 @@ function renderWeekends() {
     el.onclick = () => {
       const key = el.getAttribute("data-kids-flag");
       const value = el.getAttribute("data-kids-value");
-      const info = state.weekendInfo[key] || {};
-      // clicking the already-active option clears the flag
-      updateWeekend(key, { kidsFlag: info.kidsFlag === value ? null : value });
+      const effective = getEffectiveKidsFlag(key, fromISO(key));
+      // clicking the currently-active option (default or explicit) clears it explicitly;
+      // any click locks in a value from now on, so the default never applies again
+      updateWeekend(key, { kidsFlag: effective === value ? "none" : value });
       renderWeekends();
     };
   });
@@ -491,11 +510,12 @@ function renderWeekendCard(w) {
 
   const holidayClass = w.isHoliday ? (w.holidayStatus === "confirmed" ? "holiday-confirmed" : "holiday-tentative") : "";
   const campClass = info.campingEnabled ? (info.campingConfirmed ? "camp-confirmed" : "camp-tentative") : "";
-  const kidsCardClass = info.kidsFlag === "kids" ? "kids-flag" : info.kidsFlag === "nokids" ? "nokids-flag" : "";
+  const effectiveKidsFlag = getEffectiveKidsFlag(w.key, w.sat);
+  const kidsCardClass = effectiveKidsFlag === "kids" ? "kids-flag" : effectiveKidsFlag === "nokids" ? "nokids-flag" : "";
 
   const summaryParts = [];
-  if (info.kidsFlag === "kids") summaryParts.push(`<span class="kids-badge">👨‍👩‍👧 Kids</span>`);
-  if (info.kidsFlag === "nokids") summaryParts.push(`<span class="nokids-badge">🙅 No kids</span>`);
+  if (effectiveKidsFlag === "kids") summaryParts.push(`<span class="kids-badge">👨‍👩‍👧 Kids</span>`);
+  if (effectiveKidsFlag === "nokids") summaryParts.push(`<span class="nokids-badge">🙅 No kids</span>`);
   if (info.parkrun) summaryParts.push(`<span>🏃 ${escapeHtml(info.parkrun)}</span>`);
   if (info.campingEnabled) {
     summaryParts.push(`<span class="${campClass}">⛺ ${escapeHtml(info.campingLocation || "Camping")}${!info.campingConfirmed ? " (tentative)" : ""}</span>`);
@@ -529,8 +549,8 @@ function renderWeekendCard(w) {
           <div class="field-label">
             <span>Kids this weekend?</span>
             <div class="kids-toggle-group">
-              <button type="button" class="kids-toggle-btn ${info.kidsFlag === "kids" ? "active kids" : ""}" data-kids-flag="${w.key}" data-kids-value="kids">👨‍👩‍👧 Kids</button>
-              <button type="button" class="kids-toggle-btn ${info.kidsFlag === "nokids" ? "active nokids" : ""}" data-kids-flag="${w.key}" data-kids-value="nokids">🙅 No kids</button>
+              <button type="button" class="kids-toggle-btn ${effectiveKidsFlag === "kids" ? "active kids" : ""}" data-kids-flag="${w.key}" data-kids-value="kids">👨‍👩‍👧 Kids</button>
+              <button type="button" class="kids-toggle-btn ${effectiveKidsFlag === "nokids" ? "active nokids" : ""}" data-kids-flag="${w.key}" data-kids-value="nokids">🙅 No kids</button>
             </div>
           </div>
 
