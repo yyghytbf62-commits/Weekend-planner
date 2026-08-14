@@ -190,23 +190,18 @@ function buildWeekends(startDate, count, holidays) {
   let sat = nextSaturdayOnOrAfter(startDate);
   for (let i = 0; i < count; i++) {
     const sun = addDays(sat, 1);
-    const winStart = addDays(sat, -2);
-    const winEnd = addDays(sun, 2);
-    let extStart = sat, extEnd = sun;
     let matched = [];
     for (const h of holidays) {
       const hStart = fromISO(h.start);
       const hEnd = fromISO(h.end || h.start);
-      if (hStart <= winEnd && hEnd >= winStart) {
+      // only counts as a holiday weekend if the holiday actually overlaps the Sat/Sun itself
+      if (hStart <= sun && hEnd >= sat) {
         matched.push(h);
-        if (hStart < extStart) extStart = hStart;
-        if (hEnd > extEnd) extEnd = hEnd;
       }
     }
-    // if any matched holiday is confirmed, treat the weekend as confirmed; otherwise tentative
     const holidayStatus = matched.length === 0 ? null : (matched.some(h => h.confirmed) ? "confirmed" : "tentative");
     weekends.push({
-      key: toISO(sat), sat, sun, extStart, extEnd,
+      key: toISO(sat), sat, sun,
       isHoliday: matched.length > 0,
       holidayStatus,
       holidayNames: matched.map(h => h.name),
@@ -502,9 +497,7 @@ function renderWeekends() {
 function renderWeekendCard(w) {
   const info = state.weekendInfo[w.key] || {};
   const isOpen = state.openWeekend === w.key;
-  const rangeLabel = w.isHoliday
-    ? `${fmtWeekday(w.extStart)} ${fmtShort(w.extStart)} – ${fmtWeekday(w.extEnd)} ${fmtShort(w.extEnd)}`
-    : `${fmtShort(w.sat)} – ${fmtShort(w.sun)}`;
+  const rangeLabel = `${fmtShort(w.sat)} – ${fmtShort(w.sun)}`;
 
   const holidayClass = w.isHoliday ? (w.holidayStatus === "confirmed" ? "holiday-confirmed" : "holiday-tentative") : "";
   const campClass = info.campingEnabled ? (info.campingConfirmed ? "camp-confirmed" : "camp-tentative") : "";
