@@ -47,6 +47,8 @@
   .holiday-name.tentative { color: #E3A47E; }
   .holiday-dates { color: #7A8A6B; margin-left: 8px; font-size: 13px; }
   .tentative-tag { color: #B18A6E; margin-left: 8px; font-size: 11px; font-style: italic; }
+  .item-actions { display: flex; align-items: center; gap: 2px; }
+  .edit-btn { background: none; border: none; color: #5B6E4E; padding: 4px; display: flex; }
   .del-btn { background: none; border: none; color: #B0522B; padding: 4px; display: flex; }
 
   .holiday-form { margin-top: 14px; border-top: 1px solid #E5E7DB; padding-top: 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -74,7 +76,9 @@
   .marker.holiday-tentative { background: #E3A47E; box-shadow: 0 0 0 3px rgba(227,164,126,0.18); }
   .trail-line { flex: 1; width: 2px; background: #D3D8C5; }
 
-  .card { flex: 1; background: #fff; border: 1px solid #DCE0D0; border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+  .card { flex: 1; background: #fff; border: 1px solid #DCE0D0; border-radius: 10px; margin-bottom: 14px; overflow: hidden; border-left: 4px solid transparent; }
+  .card.kids-flag { border-left-color: #D9A441; }
+  .card.nokids-flag { border-left-color: #7C6FA6; }
   .card-head {
     width: 100%; background: none; border: none; padding: 14px 16px;
     display: flex; align-items: center; justify-content: space-between; text-align: left;
@@ -88,6 +92,8 @@
   .summary-line { font-size: 12px; color: #7A8A6B; margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
   .summary-line .camp-confirmed { color: #3E6B8A; font-weight: 500; }
   .summary-line .camp-tentative { color: #8FB0C4; font-weight: 500; }
+  .summary-line .kids-badge { color: #B3841F; font-weight: 500; }
+  .summary-line .nokids-badge { color: #6B5A96; font-weight: 500; }
 
   .card-body { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; }
   .field-label { font-size: 12px; color: #5B6E4E; font-weight: 500; display: flex; flex-direction: column; gap: 4px; }
@@ -103,6 +109,14 @@
   .camping-block { margin-left: 24px; display: flex; flex-direction: column; gap: 8px; }
   .confirm-btn { display: flex; align-items: center; gap: 6px; background: none; border: none; padding: 0; font-size: 12px; font-weight: 500; color: #8FB0C4; }
   .confirm-btn.confirmed { color: #3E6B8A; }
+
+  .kids-toggle-group { display: flex; gap: 6px; }
+  .kids-toggle-btn {
+    flex: 1; border: 1px solid #DCE0D0; background: #F5F6EF; border-radius: 7px;
+    padding: 7px 10px; font-size: 12px; font-weight: 500; color: #5B6E4E; text-align: center;
+  }
+  .kids-toggle-btn.active.kids { background: #FBEED9; border-color: #D9A441; color: #B3841F; }
+  .kids-toggle-btn.active.nokids { background: #ECE9F5; border-color: #7C6FA6; color: #6B5A96; }
 
   .more-btn-wrap { display: flex; justify-content: center; margin-top: 4px; margin-left: 34px; }
   .more-btn { background: #F5F6EF; border: 1px solid #DCE0D0; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 500; color: #22301C; }
@@ -315,9 +329,14 @@ function renderHolidays() {
             ${!h.confirmed ? `<span class="tentative-tag">tentative</span>` : ""}
           </span>
         </button>
-        <button class="del-btn" data-remove-holiday="${h.id}" aria-label="Remove ${escapeHtml(h.name)}">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        </button>
+        <div class="item-actions">
+          <button class="edit-btn" data-edit-holiday="${h.id}" aria-label="Edit ${escapeHtml(h.name)}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+          </button>
+          <button class="del-btn" data-remove-holiday="${h.id}" aria-label="Remove ${escapeHtml(h.name)}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
       </li>
     `).join("") + `</ul>`;
   }
@@ -325,20 +344,26 @@ function renderHolidays() {
   const formWrap = document.getElementById("holidayFormWrap");
   formWrap.style.display = state.showHolidayForm ? "block" : "none";
   if (state.showHolidayForm) {
+    const isEditing = !!state._editingHolidayId;
     formWrap.innerHTML = `
       <div class="holiday-form">
         <input type="text" id="hName" placeholder="Name (e.g. Annual leave, Christmas break)" value="${escapeHtml(state._hName || "")}" />
         <div class="date-row">
           <label><span>Start</span><input type="date" id="hStart" value="${state._hStart || ""}" /></label>
-          <label><span>End (optional)</span><input type="date" id="hEnd" value="${state._hEnd || ""}" /></label>
+          <label><span>End (optional)</span><input type="date" id="hEnd" value="${state._hEnd || ""}" min="${state._hStart || ""}" /></label>
         </div>
-        <button class="save-holiday-btn" id="saveHolidayBtn">Save holiday</button>
+        <button class="save-holiday-btn" id="saveHolidayBtn">${isEditing ? "Update holiday" : "Save holiday"}</button>
       </div>
     `;
     document.getElementById("hName").oninput = e => { state._hName = e.target.value; updateSaveHolidayBtn(); };
-    document.getElementById("hStart").oninput = e => { state._hStart = e.target.value; updateSaveHolidayBtn(); };
+    document.getElementById("hStart").oninput = e => {
+      state._hStart = e.target.value;
+      // keep the end-date picker's calendar view on the same month by default
+      if (!state._hEnd || state._hEnd < state._hStart) state._hEnd = state._hStart;
+      renderHolidays();
+    };
     document.getElementById("hEnd").oninput = e => { state._hEnd = e.target.value; };
-    document.getElementById("saveHolidayBtn").onclick = addHoliday;
+    document.getElementById("saveHolidayBtn").onclick = saveHoliday;
     updateSaveHolidayBtn();
   }
 }
@@ -350,16 +375,32 @@ function updateSaveHolidayBtn() {
   btn.disabled = !ok;
 }
 
-function addHoliday() {
+function saveHoliday() {
   const name = (state._hName || "").trim();
   const start = state._hStart;
   const end = state._hEnd;
   if (!name || !start) return;
-  state.holidays.push({ id: uid(), name, start, end: end || start, confirmed: false });
+  if (state._editingHolidayId) {
+    const h = state.holidays.find(h => h.id === state._editingHolidayId);
+    if (h) { h.name = name; h.start = start; h.end = end || start; }
+  } else {
+    state.holidays.push({ id: uid(), name, start, end: end || start, confirmed: false });
+  }
   state.holidays.sort((a,b) => a.start.localeCompare(b.start));
-  state._hName = ""; state._hStart = ""; state._hEnd = "";
+  state._hName = ""; state._hStart = ""; state._hEnd = ""; state._editingHolidayId = null;
   state.showHolidayForm = false;
   persist();
+  renderAll();
+}
+
+function editHoliday(id) {
+  const h = state.holidays.find(h => h.id === id);
+  if (!h) return;
+  state._editingHolidayId = id;
+  state._hName = h.name;
+  state._hStart = h.start;
+  state._hEnd = h.end || h.start;
+  state.showHolidayForm = true;
   renderAll();
 }
 
@@ -429,6 +470,16 @@ function renderWeekends() {
   section.querySelectorAll("[data-activities]").forEach(el => {
     el.oninput = () => updateWeekend(el.getAttribute("data-activities"), { activities: el.value });
   });
+  section.querySelectorAll("[data-kids-flag]").forEach(el => {
+    el.onclick = () => {
+      const key = el.getAttribute("data-kids-flag");
+      const value = el.getAttribute("data-kids-value");
+      const info = state.weekendInfo[key] || {};
+      // clicking the already-active option clears the flag
+      updateWeekend(key, { kidsFlag: info.kidsFlag === value ? null : value });
+      renderWeekends();
+    };
+  });
 }
 
 function renderWeekendCard(w) {
@@ -440,8 +491,11 @@ function renderWeekendCard(w) {
 
   const holidayClass = w.isHoliday ? (w.holidayStatus === "confirmed" ? "holiday-confirmed" : "holiday-tentative") : "";
   const campClass = info.campingEnabled ? (info.campingConfirmed ? "camp-confirmed" : "camp-tentative") : "";
+  const kidsCardClass = info.kidsFlag === "kids" ? "kids-flag" : info.kidsFlag === "nokids" ? "nokids-flag" : "";
 
   const summaryParts = [];
+  if (info.kidsFlag === "kids") summaryParts.push(`<span class="kids-badge">👨‍👩‍👧 Kids</span>`);
+  if (info.kidsFlag === "nokids") summaryParts.push(`<span class="nokids-badge">🙅 No kids</span>`);
   if (info.parkrun) summaryParts.push(`<span>🏃 ${escapeHtml(info.parkrun)}</span>`);
   if (info.campingEnabled) {
     summaryParts.push(`<span class="${campClass}">⛺ ${escapeHtml(info.campingLocation || "Camping")}${!info.campingConfirmed ? " (tentative)" : ""}</span>`);
@@ -457,7 +511,7 @@ function renderWeekendCard(w) {
         <div class="marker ${holidayClass}"></div>
         <div class="trail-line"></div>
       </div>
-      <div class="card">
+      <div class="card ${kidsCardClass}">
         <button class="card-head" data-toggle-open="${w.key}">
           <div>
             <div class="range-label mono ${holidayClass}">${rangeLabel}</div>
@@ -472,6 +526,14 @@ function renderWeekendCard(w) {
         </button>
         ${isOpen ? `
         <div class="card-body">
+          <div class="field-label">
+            <span>Kids this weekend?</span>
+            <div class="kids-toggle-group">
+              <button type="button" class="kids-toggle-btn ${info.kidsFlag === "kids" ? "active kids" : ""}" data-kids-flag="${w.key}" data-kids-value="kids">👨‍👩‍👧 Kids</button>
+              <button type="button" class="kids-toggle-btn ${info.kidsFlag === "nokids" ? "active nokids" : ""}" data-kids-flag="${w.key}" data-kids-value="nokids">🙅 No kids</button>
+            </div>
+          </div>
+
           <label class="field-label">
             <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M4 12a8 8 0 0 1 8-8M4 12a8 8 0 0 0 8 8"/></svg> parkrun</span>
             <input type="text" placeholder="e.g. Kedron Brook parkrun" value="${escapeHtml(info.parkrun || "")}" data-parkrun="${w.key}" />
@@ -513,7 +575,13 @@ function renderAll() {
 
 // ---------- init ----------
 document.getElementById("toggleHolidayForm").onclick = () => {
-  state.showHolidayForm = !state.showHolidayForm;
+  const opening = !state.showHolidayForm;
+  state.showHolidayForm = opening;
+  if (opening) {
+    // starting a fresh "add", not an edit
+    state._editingHolidayId = null;
+    state._hName = ""; state._hStart = ""; state._hEnd = "";
+  }
   renderAll();
 };
 document.getElementById("moreWeeksBtn").onclick = () => {
@@ -525,6 +593,8 @@ document.getElementById("moreWeeksBtn").onclick = () => {
 document.getElementById("holidayListWrap").addEventListener("click", (e) => {
   const confirmBtn = e.target.closest("[data-toggle-confirm]");
   if (confirmBtn) { toggleHolidayConfirmed(confirmBtn.getAttribute("data-toggle-confirm")); return; }
+  const editBtn = e.target.closest("[data-edit-holiday]");
+  if (editBtn) { editHoliday(editBtn.getAttribute("data-edit-holiday")); return; }
   const removeBtn = e.target.closest("[data-remove-holiday]");
   if (removeBtn) { removeHoliday(removeBtn.getAttribute("data-remove-holiday")); return; }
 });
@@ -534,9 +604,12 @@ loadData().then(d => {
   state.weekendInfo = d.weekendInfo || {};
   document.getElementById("loading").style.display = "none";
   document.getElementById("app").style.display = "block";
-  if (storageMode === "memory") {
+  try {
+    localStorage.setItem("__trailhead_test__", "1");
+    localStorage.removeItem("__trailhead_test__");
+  } catch (e) {
     const warn = document.getElementById("storageWarning");
-    warn.textContent = "Changes will only be kept for this session — open the downloaded file in a browser tab (or host it) to save permanently.";
+    warn.textContent = "This browser is blocking local storage (e.g. private/incognito mode), so changes won't be saved. Try a normal browser tab.";
     warn.style.display = "block";
   }
   renderAll();
